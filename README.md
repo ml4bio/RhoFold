@@ -53,11 +53,11 @@ First, download the repository and create the environment.
 ```
 git clone https://github.com/RFOLD/RiboFold.git 
 cd ./RiboFold
-conda env create -f ./envs/environment_linux.yml
+conda env create -f ./envs/environment_linux.yaml
 ```
-Then, activate the "RiboFold" environment.
+Then, activate the "ribofold" environment.
 ```
-conda activate RiboFold
+conda activate ribofold
 python setup.py install
 ```
 

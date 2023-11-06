@@ -2,7 +2,7 @@
 
 ![header](header.png)
 
-This is the opensource code for RiboFold.
+This is the open source code for RiboFold.
 
 <details><summary>Citation</summary>
 

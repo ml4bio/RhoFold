@@ -34,6 +34,9 @@ This is the open source code for RhoFold.
 
 ## Updates <a name="New_Updates"></a>
 
+*** Dec 31 / 2023 ***
+Integrated inferencing with clustered, sampled MSAs in RhoFold.
+
 *** Oct 10 / 2023 ***
 
 Initial commits:

@@ -1,4 +1,4 @@
-name: ribofold
+name: rhofold
 channels:
   - conda-forge
   - defaults

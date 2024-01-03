@@ -1,6 +1,6 @@
 """
 The sequence (de)serialization part is modified from Sailer's Phylopandas package.
-Users can call `python3 ribofold_msa_sampler_clust.py -i MSA_PATH -o OUT_DIR -n NUM_CLUST`
+Users can call `python3 rhofold_msa_sampler_clust.py -i MSA_PATH -o OUT_DIR -n NUM_CLUST`
 liang.hong@link.cuhk.edu.hk
 """
 
@@ -12,7 +12,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 import pandas as pd
 import math
-import ribofold.model.rna_fm as rna_esm
+import rhofold.model.rna_fm as rna_esm
 
 from Bio import SeqIO
 from Bio.Seq import Seq

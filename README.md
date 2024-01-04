@@ -157,7 +157,7 @@ python inference.py --input_fas ./example/input/3owzA/3owzA.fasta --single_seq_p
 
 To support MSA construction, 3 sequence databases (RNAcentral, Rfam, and nt) totaling about 900GB need to be downloaded. 
 
-**Warning: you should ensure that there are adequate spaces for saving the data! Otherwise you can directly utilize our [online server](#Online_Server), or download our [off-the-shelf MSAs](#Training_Data) instead of regenerating them.**
+**Warning: you should ensure that there are adequate spaces for saving the data! Otherwise you can directly utilize our [online server](https://proj.cse.cuhk.edu.hk/aihlab/RhoFold/), or download our [off-the-shelf MSAs](#Training_Data) instead of regenerating them.**
 ```
 ./database/bin/builddb.sh
 ```

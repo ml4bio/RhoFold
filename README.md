@@ -55,7 +55,7 @@ First, download the repository and create the environment.
 ### Linux Users <a name="Installation_Linux"></a>
 (MacOS is currently not supported)
 ```
-git clone https://github.com/RFOLD/RhoFold.git 
+git clone https://github.com/ml4bio/RhoFold.git
 cd ./RhoFold
 conda env create -f ./envs/environment_linux.yaml
 ```

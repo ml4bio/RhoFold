@@ -44,7 +44,7 @@ Initial commits:
 1.  [Pretrained model](https://drive.google.com/file/d/1To2bjbhQLFx1k8hBOW5q1JFq6ut27XEv/view?usp=sharing) is provided.
 
 ## Online Server <a name="Online_Server"></a>
-No need to create the environment locally, you can also access RhoFold easily through its online server: https://proj.cse.cuhk.edu.hk/aihlab/RhoFold/
+No need to create the environment locally, you can also access RhoFold+ easily through its online server: https://proj.cse.cuhk.edu.hk/aihlab/RhoFold/
 
 
 ## Local Environment Setup <a name="Local_Environment_Setup"></a>

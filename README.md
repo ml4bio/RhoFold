@@ -1,4 +1,4 @@
-# RhoFold+: Accurate RNA 3D structure prediction using language model-based deep learning
+# RhoFold+: Accurate RNA 3D structure prediction using a language model-based deep learning approach
 
 ![header](View.png)
 

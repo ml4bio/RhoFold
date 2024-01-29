@@ -1,6 +1,6 @@
 # RhoFold+: Accurate RNA 3D structure prediction using language model-based deep learning
 
-![header](header.png)
+![header](View.png)
 
 This is the open source code for RhoFold+.
 

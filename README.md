@@ -1,4 +1,4 @@
-# RhoFold+: Accurate RNA secondary structure prediction with end-to-end advanced deep neural networks and large RNA language models
+# RhoFold+: Accurate RNA 3D structure prediction with language model-base deep learning
 
 ![header](header.png)
 

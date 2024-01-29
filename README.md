@@ -2,7 +2,7 @@
 
 ![header](header.png)
 
-This is the open source code for RhoFold.
+This is the open source code for RhoFold+.
 
 <details><summary>Citation</summary>
 
@@ -36,7 +36,7 @@ This is the open source code for RhoFold.
 
 *** Dec 31 / 2023 ***
 
-Integrated inferencing with clustered, sampled MSAs in RhoFold.
+Integrated inferencing with clustered, sampled MSAs in RhoFold+.
 
 *** Oct 10 / 2023 ***
 
@@ -123,7 +123,7 @@ The `--output_dir` directory will have the following structure:
 
 The contents of each output file are as follows:
 
-*   `results.npz` – A `.npz` file containing the distogram prediction of RhoFold in NumPy arrays.
+*   `results.npz` – A `.npz` file containing the distogram prediction of RhoFold+ in NumPy arrays.
 *   `ss.ct` – A .ct format text file containing the predicted secondary structure.
 *   `unrelaxed_model.pdb` – A PDB format file containing the predicted structure from deep learning.
 *   `relaxed_{relax_steps}_model.pdb` – A PDB format file containing the amber relaxed structure from unrelaxed_model.pdb.
@@ -132,7 +132,7 @@ The contents of each output file are as follows:
 
 ### Examples <a name="Examples"></a>
 
-Below are examples on how to use RhoFold in different scenarios.
+Below are examples on how to use RhoFold+ in different scenarios.
 
 #### Folding with sequence and given MSA as input
 
@@ -153,7 +153,7 @@ This function is in testing. It's not as accurate as the MSA version. It's only 
 ```commandline
 python inference.py --input_fas ./example/input/3owzA/3owzA.fasta --single_seq_pred True --output_dir ./example/output/3owzA/ --ckpt ./pretrained/RhoFold_pretrained.pt
 ```
-2.With our constructed MSA (**Full version of RhoFold**)
+2.With our constructed MSA (**Full version of RhoFold+**)
 
 To support MSA construction, 3 sequence databases (RNAcentral, Rfam, and nt) totaling about 900GB need to be downloaded. 
 
@@ -167,7 +167,7 @@ python inference.py --input_fas ./example/input/3owzA/3owzA.fasta --output_dir .
 ```
 
 ## Training Data <a name="Training_Data"></a>
-You can access training data (13.86G) from the [google drive link](https://drive.google.com/file/d/1qcETN6QQES7cwdfsTPnnlsa77brmyBrN/view?usp=sharing). The file includes the off-the-shelf MSAs of training data, which can be fed into RhoFold directly.
+You can access training data (13.86G) from the [google drive link](https://drive.google.com/file/d/1qcETN6QQES7cwdfsTPnnlsa77brmyBrN/view?usp=sharing). The file includes the off-the-shelf MSAs of training data, which can be fed into RhoFold+ directly.
 
 
 [//]: # (AlphaFold's, OpenFold's and, by extension, xTrimoMultimer source code is licensed under the permissive Apache Licence, Version 2.0.)

@@ -105,10 +105,12 @@ def main(config):
                                                          logger=logger)
 
     # Amber relaxation
-    if config.relax_steps is not None and config.relax_steps > 0:
-        with timing(f'Amber Relaxation : {config.relax_steps} iterations', logger=logger):
-            amber_relax = AmberRelaxation(max_iterations=config.relax_steps, logger=logger)
-            relaxed_model = f'{config.output_dir}/relaxed_{config.relax_steps}_model.pdb'
+    if config.relax_steps is not None:
+        relax_steps = int(config.relax_steps)
+        if relax_steps > 0:
+        with timing(f'Amber Relaxation : {relax_steps} iterations', logger=logger):
+            amber_relax = AmberRelaxation(max_iterations=relax_steps, logger=logger)
+            relaxed_model = f'{config.output_dir}/relaxed_{relax_steps}_model.pdb'
             amber_relax.process(unrelaxed_model, relaxed_model)
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@ import sys
 
 import numpy as np
 import torch
+import simtk.openmm as openmm
 
 from rhofold.data.balstn import BLASTN
 from rhofold.rhofold import RhoFold
@@ -103,13 +104,20 @@ def main(config):
                                                          path=unrelaxed_model, chain_id=None,
                                                          confidence=output['plddt'][0].data.cpu().numpy(),
                                                          logger=logger)
+    # Check if CUDA is available in OpenMM
+    cuda_available = False
+    for i in range(openmm.Platform.getNumPlatforms()):
+        if openmm.Platform.getPlatform(i).getName().lower() == "cuda":
+            cuda_available = True
+            break
 
     # Amber relaxation
     if config.relax_steps is not None:
         relax_steps = int(config.relax_steps)
         if relax_steps > 0:
             with timing(f'Amber Relaxation : {relax_steps} iterations', logger=logger):
-                amber_relax = AmberRelaxation(max_iterations=relax_steps, logger=logger)
+                use_gpu = cuda_available and config.device.startswith("cuda:")
+                amber_relax = AmberRelaxation(max_iterations=relax_steps, logger=logger, use_gpu=use_gpu)
                 relaxed_model = f'{config.output_dir}/relaxed_{relax_steps}_model.pdb'
                 amber_relax.process(unrelaxed_model, relaxed_model)
 

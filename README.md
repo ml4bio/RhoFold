@@ -49,8 +49,9 @@ No need to create the environment locally, you can also access RhoFold+ easily t
 
 ## Local Environment Setup <a name="Local_Environment_Setup"></a>
 
-Create Environment with Conda
-First, download the repository and create the environment.
+For an updated step-by-step tutorial, we have also developed a protocol for RhoFold+ available at: https://github.com/WangJiuming/rhofold_protocol.
+
+To create environment with conda, first, download the repository and create the environment.
 
 ### Linux Users <a name="Installation_Linux"></a>
 (MacOS is currently not supported)

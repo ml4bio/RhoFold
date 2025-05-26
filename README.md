@@ -70,7 +70,7 @@ python setup.py install
 
 ```
 cd ./pretrained
-wget https://proj.cse.cuhk.edu.hk/aihlab/RhoFold/api/download?filename=RhoFold_pretrained.pt -O RhoFold_pretrained.pt
+wget https://huggingface.co/cuhkaih/rhofold/resolve/main/rhofold_pretrained_params.pt -O RhoFold_pretrained.pt
 cd ../
 ```
 

@@ -68,6 +68,8 @@ python setup.py install
 
 ### Download pre-trained model <a name="Pretrained_Model"></a>
 
+The model should be able to automatically download the pre-trained checkpoint before inference. Perform the following manual download in case the automatic download is unavailable.
+
 ```
 cd ./pretrained
 wget https://huggingface.co/cuhkaih/rhofold/resolve/main/rhofold_pretrained_params.pt -O RhoFold_pretrained.pt

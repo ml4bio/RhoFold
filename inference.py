@@ -1,10 +1,12 @@
 """ """
 import logging
+from pathlib import Path
 import os
 import sys
 
 import numpy as np
 import torch
+from huggingface_hub import snapshot_download
 
 from rhofold.data.balstn import BLASTN
 from rhofold.rhofold import RhoFold
@@ -39,6 +41,13 @@ def main(config):
     logger.info(f'Constructing RhoFold')
     model = RhoFold(rhofold_config)
 
+    logger.info(f'    downloading {config.ckpt}')
+    try:
+        snapshot_download(repo_id='cuhkaih/rhofold', local_dir=Path(config.ckpt).parent)
+    except Exception as e:
+        logger.info(f'    Error: Could not download the checkpoint from Hugging Face (cuhkaih/rhofold) to {Path(config.ckpt).parent}.')
+        raise e
+        
     logger.info(f'    loading {config.ckpt}')
     model.load_state_dict(torch.load(config.ckpt, map_location=torch.device('cpu'))['model'])
     model.eval()

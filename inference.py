@@ -118,7 +118,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--device", help="Default cpu. If GPUs are available, you can set --device cuda:<GPU_index> for faster prediction.", default=None)
-    parser.add_argument("--ckpt", help="Path to the pretrained model, default ./pretrained/model_20221010_params.pt", default='./pretrained/rhofold_pretrained_params.pt')
+    parser.add_argument("--ckpt", help="Path to the pretrained model, default ./pretrained/rhofold_pretrained_params.pt", default='./pretrained/rhofold_pretrained_params.pt')
     parser.add_argument("--input_fas", help="Path to the input fasta file. Valid nucleic acids in RNA sequence: A, U, G, C", required=True)
     parser.add_argument("--input_a3m", help="Path to the input msa file. Default None."
                                             "If --input_a3m is not given (set to None), MSA will be generated automatically. ", default=None)

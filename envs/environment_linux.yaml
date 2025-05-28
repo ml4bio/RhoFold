@@ -1,74 +1,149 @@
 name: rhofold
 channels:
   - pytorch
-  - conda-forge
   - defaults
+  - conda-forge
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_kmp_llvm
+  - abseil-cpp=20211102.0=hd4dd3e8_0
+  - aiohttp=3.8.3=py37h5eee18b_0
+  - aiosignal=1.2.0=pyhd3eb1b0_0
+  - arrow-cpp=8.0.0=py37h60b952e_1
+  - async-timeout=4.0.2=py37h06a4308_0
+  - asynctest=0.13.0=py_0
+  - attrs=22.1.0=py37h06a4308_0
+  - aws-c-common=0.6.8=h5eee18b_1
+  - aws-c-event-stream=0.1.6=h6a678d5_6
+  - aws-checksums=0.1.11=h5eee18b_2
+  - aws-sdk-cpp=1.8.185=h721c034_1
   - blas=1.0=mkl
-  - ca-certificates=2022.9.24=ha878542_0
+  - boost-cpp=1.73.0=h7f8727e_12
+  - bottleneck=1.3.5=py37h7deecbd_0
+  - brotlipy=0.7.0=py37h27cfd23_1003
+  - bzip2=1.0.8=h5eee18b_6
+  - c-ares=1.19.1=h5eee18b_0
+  - ca-certificates=2025.2.25=h06a4308_0
+  - cffi=1.15.1=py37h5eee18b_3
+  - click=8.0.4=py37h06a4308_0
+  - cryptography=38.0.2=py37h5994e8b_1
   - cudatoolkit=11.3.1=h9edb442_10
+  - dataclasses=0.8=pyh6d0b6a4_7
+  - datasets=2.6.1=py37h06a4308_0
+  - dill=0.3.6=py37h06a4308_0
   - fftw=3.3.10=nompi_hf0379b8_105
+  - filelock=3.9.0=py37h06a4308_0
+  - frozenlist=1.3.3=py37h5eee18b_0
+  - fsspec=2022.11.0=py37h06a4308_0
+  - gflags=2.2.2=h6a678d5_1
+  - glog=0.5.0=h6a678d5_1
+  - grpc-cpp=1.46.3=h0b91f02_1
+  - icu=58.2=he6710b0_3
+  - idna=3.4=py37h06a4308_0
+  - importlib-metadata=4.11.3=py37h06a4308_0
+  - importlib_metadata=4.11.3=hd3eb1b0_0
+  - joblib=1.1.1=py37h06a4308_0
+  - krb5=1.20.1=h143b758_1
   - ld_impl_linux-64=2.39=hc81fddc_0
   - libblas=3.9.0=16_linux64_mkl
+  - libboost=1.73.0=h28710b8_12
+  - libbrotlicommon=1.0.9=h5eee18b_9
+  - libbrotlidec=1.0.9=h5eee18b_9
+  - libbrotlienc=1.0.9=h5eee18b_9
   - libcblas=3.9.0=16_linux64_mkl
+  - libcurl=8.12.1=hc9e6f67_0
+  - libedit=3.1.20221030=h5eee18b_0
+  - libev=4.33=h7f8727e_1
+  - libevent=2.1.12=hdbd6064_1
   - libffi=3.4.2=h7f98852_5
   - libgcc-ng=12.2.0=h65d4601_18
   - libgfortran-ng=12.2.0=h69a702a_18
   - libgfortran5=12.2.0=h337968e_18
   - liblapack=3.9.0=16_linux64_mkl
+  - libnghttp2=1.57.0=h2d74bed_0
   - libnsl=2.0.0=h7f98852_0
+  - libprotobuf=3.20.3=he621ea3_0
   - libsqlite=3.39.4=h753d276_0
+  - libssh2=1.11.1=h251f7ec_0
   - libstdcxx-ng=12.2.0=h46fd767_18
+  - libthrift=0.15.0=h1795dd8_2
   - libuv=1.44.2=h166bdaf_0
   - libzlib=1.2.13=h166bdaf_4
   - llvm-openmp=14.0.4=he0ac6c6_0
+  - lz4-c=1.9.4=h6a678d5_1
   - mkl=2022.1.0=h84fe81f_915
+  - multidict=6.0.2=py37h5eee18b_0
+  - multiprocess=0.70.14=py37h06a4308_0
   - ncurses=6.3=h27087fc_1
+  - numexpr=2.7.3=py37he8f5f7f_1
   - ocl-icd=2.3.1=h7f98852_0
   - ocl-icd-system=1.0.0=1
   - openmm=7.7.0=py37h9d45a84_1
-  - openssl=3.0.5=h166bdaf_2
+  - openssl=3.0.16=h5eee18b_0
+  - orc=1.7.4=hb3bc3d3_1
+  - pandas=1.3.5=py37h8c16a72_0
   - pip=22.3=pyhd8ed1ab_0
+  - pyarrow=8.0.0=py37h992f0b0_0
+  - pycparser=2.21=pyhd3eb1b0_0
+  - pyopenssl=23.0.0=py37h06a4308_0
+  - pysocks=1.7.1=py37_1
   - python=3.7.12=hf930737_100_cpython
+  - python-dateutil=2.8.2=pyhd3eb1b0_0
+  - python-xxhash=2.0.2=py37h5eee18b_1
   - python_abi=3.7=2_cp37m
   - pytorch=1.10.2=py3.7_cuda11.3_cudnn8.2.0_0
   - pytorch-mutex=1.0=cuda
+  - pytz=2022.7=py37h06a4308_0
+  - pyyaml=6.0=py37h5eee18b_1
+  - re2=2022.04.01=h295c915_0
   - readline=8.1.2=h0f457ee_0
+  - regex=2022.7.9=py37h5eee18b_0
+  - responses=0.13.3=pyhd3eb1b0_0
+  - sacremoses=0.0.43=pyhd3eb1b0_0
   - setuptools=65.5.0=pyhd8ed1ab_0
+  - six=1.16.0=pyhd3eb1b0_1
+  - snappy=1.2.1=h6a678d5_0
   - sqlite=3.39.4=h4ff8645_0
   - tbb=2021.6.0=h924138e_0
   - tk=8.6.12=h27826a3_0
+  - tokenizers=0.13.1=py37hfb4b0a8_0
+  - transformers=4.29.2=pyhd8ed1ab_0
+  - typing-extensions=4.4.0=hd8ed1ab_0
   - typing_extensions=4.4.0=pyha770c72_0
+  - utf8proc=2.6.1=h5eee18b_1
   - wheel=0.37.1=pyhd8ed1ab_0
+  - xxhash=0.8.0=h7f8727e_3
   - xz=5.2.6=h166bdaf_0
+  - yaml=0.2.5=h7b6447c_0
+  - yarl=1.8.1=py37h5eee18b_0
+  - zipp=3.11.0=py37h06a4308_0
+  - zlib=1.2.13=h166bdaf_4
+  - zstd=1.5.2=ha4553b6_0
   - pip:
-    - absl-py==1.3.0
-    - bio==1.4.0
-    - biopython==1.79
-    - biothings-client==0.2.6
-    - certifi==2022.9.24
-    - charset-normalizer==2.0.12
-    - contextlib2==21.6.0
-    - cycler==0.11.0
-    - dm-tree==0.1.7
-    - einops==0.5.0
-    - fonttools==4.37.4
-    - idna==3.4
-    - kiwisolver==1.4.4
-    - matplotlib==3.5.3
-    - ml-collections==0.1.1
-    - mygene==3.2.2
-    - numpy==1.21.2
-    - packaging==21.3
-    - pillow==9.2.0
-    - pyparsing==3.0.9
-    - python-box==6.0.2
-    - python-dateutil==2.8.2
-    - pyyaml==6.0
-    - requests==2.26.0
-    - scipy==1.7.1
-    - six==1.16.0
-    - tqdm==4.62.2
-    - urllib3==1.26.12
+      - absl-py==1.3.0
+      - bio==1.4.0
+      - biopython==1.79
+      - biothings-client==0.2.6
+      - certifi==2022.9.24
+      - charset-normalizer==2.0.12
+      - contextlib2==21.6.0
+      - cycler==0.11.0
+      - dm-tree==0.1.7
+      - einops==0.5.0
+      - fonttools==4.37.4
+      - huggingface-hub==0.16.4
+      - kiwisolver==1.4.4
+      - matplotlib==3.5.3
+      - ml-collections==0.1.1
+      - mygene==3.2.2
+      - numpy==1.21.2
+      - packaging==21.3
+      - pillow==9.2.0
+      - pyparsing==3.0.9
+      - python-box==6.0.2
+      - requests==2.26.0
+      - scipy==1.7.1
+      - tqdm==4.62.2
+      - urllib3==1.26.12

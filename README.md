@@ -160,7 +160,8 @@ python inference.py --input_fas ./example/input/3owzA/3owzA.fasta --single_seq_p
 
 To support MSA construction, 3 sequence databases (RNAcentral, Rfam, and nt) totaling about 900GB need to be downloaded. 
 
-**Warning: you should ensure that there are adequate spaces for saving the data! Otherwise you can directly utilize our [online server](https://proj.cse.cuhk.edu.hk/aihlab/RhoFold/), or download our [off-the-shelf MSAs](#Training_Data) instead of regenerating them.**
+**Warning**: You should ensure that there are adequate space for saving the data. Otherwise you can directly utilize our [online server](https://proj.cse.cuhk.edu.hk/aihlab/RhoFold/).
+<!--or download our [off-the-shelf MSAs](#Training_Data) instead of regenerating them.**-->
 ```
 ./database/bin/builddb.sh
 ```
@@ -170,7 +171,8 @@ python inference.py --input_fas ./example/input/3owzA/3owzA.fasta --output_dir .
 ```
 
 ## Training Data <a name="Training_Data"></a>
-You can access training data (13.86G) from the [google drive link](https://drive.google.com/file/d/1qcETN6QQES7cwdfsTPnnlsa77brmyBrN/view?usp=sharing). The file includes the off-the-shelf MSAs of training data, which can be fed into RhoFold+ directly.
+RhoFold's training data is available on the [Hugging Face repository](https://huggingface.co/datasets/cuhkaih/rhofold) for non-commercial use. To request access, users can submit an application through the provided form.
+<!--You can access training data (13.86G) from the [google drive link](https://drive.google.com/file/d/1qcETN6QQES7cwdfsTPnnlsa77brmyBrN/view?usp=sharing). The file includes the off-the-shelf MSAs of training data, which can be fed into RhoFold+ directly.-->
 
 
 [//]: # (AlphaFold's, OpenFold's and, by extension, xTrimoMultimer source code is licensed under the permissive Apache Licence, Version 2.0.)

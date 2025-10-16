@@ -34,8 +34,8 @@ class RhoFoldDataset(Dataset):
     ):
         """
         Args:
-            data_dir: Directory containing .seq, .a3m, .pdb files
-            index_file: Text file with list of sample names (one per line)
+            data_dir: Directory containing subdirectories: /list, /pdb, /rMSA, /seq
+            index_file: Text file with list of sample names (one per line, no .txt extension)
             max_seq_len: Maximum sequence length
             msa_depth: Maximum MSA depth
             tokenizer: Tokenizer for sequence encoding
@@ -46,8 +46,15 @@ class RhoFoldDataset(Dataset):
         self.msa_depth = msa_depth
         self.augment = augment
         
-        # Load sample names
-        with open(index_file, 'r') as f:
+        # Define subdirectories
+        self.seq_dir = self.data_dir / "seq"
+        self.msa_dir = self.data_dir / "rMSA"  # Note: rMSA instead of a3m
+        self.pdb_dir = self.data_dir / "pdb"
+        self.list_dir = self.data_dir / "list"
+        
+        # Load sample names from index file
+        index_path = self.list_dir / index_file if not index_file.endswith('.txt') else self.list_dir / f"{index_file}.txt"
+        with open(index_path, 'r') as f:
             self.samples = [line.strip() for line in f if line.strip()]
         
         # Initialize tokenizer
@@ -58,7 +65,12 @@ class RhoFoldDataset(Dataset):
             self.alphabet = tokenizer.alphabet
             self.converter = tokenizer.converter
         
-        print(f"Loaded {len(self.samples)} samples from {index_file}")
+        print(f"Loaded {len(self.samples)} samples from {index_path}")
+        print(f"Data directories:")
+        print(f"  Sequence: {self.seq_dir}")
+        print(f"  MSA: {self.msa_dir}")
+        print(f"  PDB: {self.pdb_dir}")
+        print(f"  List: {self.list_dir}")
     
     def __len__(self):
         return len(self.samples)
@@ -67,17 +79,22 @@ class RhoFoldDataset(Dataset):
         sample_name = self.samples[idx]
         
         try:
-            # Load sequence
-            seq_path = self.data_dir / f"{sample_name}.seq"
+            # Load sequence from seq/ subdirectory
+            seq_path = self.seq_dir / f"{sample_name}.seq"
             with open(seq_path, 'r') as f:
-                sequence = f.read().strip()
+                lines = f.readlines()
+                # Skip FASTA header if present
+                if lines[0].startswith('>'):
+                    sequence = lines[1].strip()
+                else:
+                    sequence = lines[0].strip()
             
-            # Load MSA
-            msa_path = self.data_dir / f"{sample_name}.a3m"
+            # Load MSA from rMSA/ subdirectory (note: .a3m extension)
+            msa_path = self.msa_dir / f"{sample_name}.a3m"
             msa_sequences = self._load_msa(msa_path)
             
-            # Load structure
-            pdb_path = self.data_dir / f"{sample_name}.pdb"
+            # Load structure from pdb/ subdirectory
+            pdb_path = self.pdb_dir / f"{sample_name}.pdb"
             structure_data = self._load_structure(pdb_path)
             
             # Process data
@@ -89,8 +106,18 @@ class RhoFoldDataset(Dataset):
             
         except Exception as e:
             print(f"Error loading sample {sample_name}: {e}")
-            # Return a dummy sample to avoid breaking the batch
-            return self._get_dummy_sample()
+            # For real data, try to continue with available data
+            if sequence and msa_sequences:
+                print(f"  Continuing with sequence data only...")
+                # Create minimal structure data
+                structure_data = self._get_dummy_structure()
+                processed = self._process_sample(
+                    sequence, msa_sequences, structure_data, sample_name
+                )
+                return processed
+            else:
+                # Only use dummy data as last resort
+                return self._get_dummy_sample()
     
     def _load_msa(self, msa_path: Path) -> List[str]:
         """Load MSA from A3M format."""
@@ -154,6 +181,15 @@ class RhoFoldDataset(Dataset):
         # Process MSA - tokens should be 2D [msa_depth, seq_len]
         msa_tokens = []
         for seq in msa_sequences[:self.msa_depth]:
+            # Ensure MSA sequence has same length as main sequence
+            if len(seq) != len(sequence):
+                print(f"Warning: MSA sequence length {len(seq)} != main sequence length {len(sequence)}")
+                # Truncate or pad MSA sequence to match main sequence
+                if len(seq) > len(sequence):
+                    seq = seq[:len(sequence)]
+                else:
+                    seq = seq + 'A' * (len(sequence) - len(seq))
+            
             seq_tokens = [self.alphabet.get_idx(s) for s in seq]
             msa_tokens.append(seq_tokens)
         
@@ -263,7 +299,7 @@ class RhoFoldDataset(Dataset):
             # Select backbone atoms for frame construction
             # This is a simplified version - in practice you'd select specific atoms
             if len(coords) >= 3:
-                selected_coords = coords[:3]  # Take first 3 atoms
+                selected_coords = torch.tensor(coords[:3], dtype=torch.float32)  # Convert to tensor
                 true_frames = self._build_local_frame(selected_coords.reshape(1, 1, 3, 3))
                 target['true_frames'] = true_frames
             else:
@@ -316,10 +352,14 @@ class RhoFoldDataset(Dataset):
     
     def _get_dummy_structure(self) -> Dict:
         """Return dummy structure data."""
+        # Create dummy coordinates for 23 atoms per residue
+        atoms_per_residue = 23
+        total_atoms = 100 * atoms_per_residue  # 100 residues * 23 atoms
+        
         return {
-            'atom_coords': np.zeros((100, 3), dtype=np.float32),
-            'atom_types': np.zeros(100, dtype=np.int64),
-            'atom_mask': np.zeros(100, dtype=bool),
+            'atom_coords': np.zeros((total_atoms, 3), dtype=np.float32),
+            'atom_types': np.zeros(total_atoms, dtype=np.int64),
+            'atom_mask': np.zeros(total_atoms, dtype=bool),
         }
     
     def _get_dummy_target(self, seq_len: int) -> Dict:
@@ -343,8 +383,8 @@ class RhoFoldDataset(Dataset):
 
 def collate_fn(batch):
     """Collate function for DataLoader."""
-    # Pad sequences to same length
-    max_len = max(item['tokens'].shape[0] for item in batch)
+    # Pad sequences to same length - tokens is [msa_depth, seq_len]
+    max_len = max(item['tokens'].shape[1] for item in batch)  # Get max sequence length
     
     collated = {}
     for key in batch[0].keys():
@@ -361,6 +401,8 @@ def collate_fn(batch):
                 else:
                     # Pad other tensors
                     tensors = [item['target'][target_key] for item in batch]
+                    # Convert numpy arrays to torch tensors if needed
+                    tensors = [torch.tensor(t) if not isinstance(t, torch.Tensor) else t for t in tensors]
                     if tensors[0].dim() == 1:
                         # 1D tensors - check if it's sequence length or flattened
                         if tensors[0].shape[0] == max_len:
@@ -389,11 +431,12 @@ def collate_fn(batch):
         elif key in ['tokens', 'msa_tokens', 'msa_mask', 'pair_mask']:
             # Pad these tensors
             if key == 'tokens':
-                # tokens should be 2D [msa_depth, seq_len]
+                # tokens should be 2D [msa_depth, seq_len] - convert to 3D [batch, msa_depth, seq_len]
                 if len(batch[0][key].shape) == 2:
                     msa_depth = batch[0][key].shape[0]
                     padded = torch.zeros(len(batch), msa_depth, max_len, dtype=batch[0][key].dtype)
                     for i, item in enumerate(batch):
+                        # item[key] is [msa_depth, seq_len], we want [batch, msa_depth, seq_len]
                         padded[i, :, :item[key].shape[1]] = item[key]
                     collated[key] = padded
                 else:
@@ -406,12 +449,16 @@ def collate_fn(batch):
                             padded[i, j, :len(item[key])] = item[key]
                     collated[key] = padded
             elif key == 'msa_tokens':
-                padded = torch.zeros(len(batch), batch[0][key].shape[0], max_len, dtype=batch[0][key].dtype)
+                # msa_tokens should be 3D [batch, msa_depth, seq_len]
+                msa_depth = batch[0][key].shape[0]
+                padded = torch.zeros(len(batch), msa_depth, max_len, dtype=batch[0][key].dtype)
                 for i, item in enumerate(batch):
                     padded[i, :, :item[key].shape[1]] = item[key]
                 collated[key] = padded
             elif key == 'msa_mask':
-                padded = torch.zeros(len(batch), batch[0][key].shape[0], max_len, dtype=batch[0][key].dtype)
+                # msa_mask should be 3D [batch, msa_depth, seq_len]
+                msa_depth = batch[0][key].shape[0]
+                padded = torch.zeros(len(batch), msa_depth, max_len, dtype=batch[0][key].dtype)
                 for i, item in enumerate(batch):
                     padded[i, :, :item[key].shape[1]] = item[key]
                 collated[key] = padded

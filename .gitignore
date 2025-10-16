@@ -1,0 +1,7 @@
+# 忽略软链接数据集文件夹
+RNA3D_DATA
+# Ignore model checkpoints
+checkpoints/
+*.ckpt
+*.pt
+*.bin

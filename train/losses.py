@@ -34,21 +34,39 @@ def L_mlm(logits, target_tokens, mask):
 # ---------- 2D: distance loss ----------
 def L_dis(distance_logits, true_dists_bins, pair_mask):
     """
-    distance_logits: (B, L, L, n_bins) logits over distance bins for each pair
+    distance_logits: (B, 3, L, L, n_bins) or (B, L, L, n_bins) logits over distance bins for each pair
     true_dists_bins: (B, L, L) integer bin indices (0..n_bins-1), use -100 for ignore
     pair_mask: (B, L, L) boolean mask for valid pair entries
     """
-    B, L, _, n_bins = distance_logits.shape
-    logits = distance_logits.view(-1, n_bins)  # (B*L*L, n_bins)
-    targets = true_dists_bins.view(-1)  # (B*L*L,)
-    loss = F.cross_entropy(logits, targets, ignore_index=-100, reduction='none')  # (B*L*L,)
-    loss = loss.view(B, L, L)
-    if pair_mask is not None:
-        loss = loss * pair_mask.to(loss.dtype)
-        denom = pair_mask.sum(dim=(1,2)).clamp(min=1.0)
-        return loss.sum(dim=(1,2)).mean()  # average across batch
+    if distance_logits.dim() == 5:
+        # Handle (B, 3, L, L, n_bins) - process each atom type separately
+        B, n_types, L, _, n_bins = distance_logits.shape
+        total_loss = 0.0
+        for i in range(n_types):
+            logits = distance_logits[:, i].view(-1, n_bins)  # (B*L*L, n_bins)
+            targets = true_dists_bins.view(-1)  # (B*L*L,)
+            loss = F.cross_entropy(logits, targets, ignore_index=-100, reduction='none')  # (B*L*L,)
+            loss = loss.view(B, L, L)
+            if pair_mask is not None:
+                loss = loss * pair_mask.to(loss.dtype)
+                denom = pair_mask.sum(dim=(1,2)).clamp(min=1.0)
+                total_loss += loss.sum(dim=(1,2)).mean()  # average across batch
+            else:
+                total_loss += loss.mean()
+        return total_loss / n_types  # average across atom types
     else:
-        return loss.mean()
+        # Handle (B, L, L, n_bins) - original case
+        B, L, _, n_bins = distance_logits.shape
+        logits = distance_logits.view(-1, n_bins)  # (B*L*L, n_bins)
+        targets = true_dists_bins.view(-1)  # (B*L*L,)
+        loss = F.cross_entropy(logits, targets, ignore_index=-100, reduction='none')  # (B*L*L,)
+        loss = loss.view(B, L, L)
+        if pair_mask is not None:
+            loss = loss * pair_mask.to(loss.dtype)
+            denom = pair_mask.sum(dim=(1,2)).clamp(min=1.0)
+            return loss.sum(dim=(1,2)).mean()  # average across batch
+        else:
+            return loss.mean()
 
 
 # ---------- 2D: secondary structure (binary) ----------
@@ -101,7 +119,6 @@ def build_local_frame(coords, atom_mask=None, eps=1e-6):
     t = coords[:,:,0]  # use C4' as origin (B,L,3)
 
     return {'R': R, 't': t}
-
 
 def L_fape(pred_frames, pred_atom_coords, true_frames, true_atom_coords, atom_mask, clamp_distance=10.0, eps=1e-8):
     """
@@ -295,20 +312,72 @@ class RhoFoldLoss(nn.Module):
         if 'mlm_logits' in pred and 'masked_tokens' in target:
             losses['mlm'] = L_mlm(pred['mlm_logits'], target['masked_tokens'], None)
         else:
-            losses['mlm'] = torch.tensor(0.0, device=next(self.parameters()).device)
+            # Use device from pred tensors since RhoFoldLoss has no parameters
+            device = next(iter(pred.values())).device if pred else torch.device('cpu')
+            losses['mlm'] = torch.tensor(0.0, device=device)
 
         losses['dis'] = L_dis(pred['distance_logits'], target['distance_bins'], target.get('pair_mask', None))
         losses['ss'] = L_ss(pred['ss_logits'], target['ss_true'], target.get('pair_mask', None))
 
-        losses['clash'] = L_clash(pred['atom_coords'], pred['atom_types'], target.get('atom_mask', None))
+        losses['clash'] = L_clash(pred['atom_coords'], pred['atom_types'], pred.get('atom_mask', None))
 
         # FAPE: require frames; fallback to coordinate RMS if frames missing
         if 'pred_frames' in pred and 'true_frames' in target:
-            losses['fape'] = L_fape(pred['pred_frames'], pred['atom_coords'], target['true_frames'], target['atom_coords'], target.get('atom_mask', None))
+            # Ensure target atom_coords has the same shape as pred atom_coords
+            true_coords = target['atom_coords']
+            if true_coords.dim() == 5:  # (B, 1, L, N, 3) -> (B, L, N, 3)
+                true_coords = true_coords.squeeze(1)
+            elif true_coords.dim() == 4 and true_coords.shape[1] == 1:  # (B, 1, L, 3) -> (B, L, 1, 3)
+                true_coords = true_coords.unsqueeze(2)
+            
+            # Ensure shapes match
+            if true_coords.shape != pred['atom_coords'].shape:
+                # Pad or truncate to match
+                B, L, N, _ = pred['atom_coords'].shape
+                if true_coords.dim() == 3:  # (B, L, 3) -> (B, L, 1, 3)
+                    true_coords = true_coords.unsqueeze(2)
+                elif true_coords.dim() == 4:
+                    if true_coords.shape[2] < N:
+                        # Pad with zeros
+                        pad_size = N - true_coords.shape[2]
+                        true_coords = torch.cat([true_coords, torch.zeros(B, L, pad_size, 3, device=true_coords.device)], dim=2)
+                    elif true_coords.shape[2] > N:
+                        # Truncate
+                        true_coords = true_coords[:, :, :N, :]
+            
+            # Ensure true_frames has correct shape
+            true_frames = target['true_frames']
+            if true_frames['R'].dim() == 4 and true_frames['R'].shape[0] == 1 and true_frames['R'].shape[1] == 1:
+                # (1, 1, 3, 3) -> (B, L, 3, 3)
+                B, L = pred['atom_coords'].shape[:2]
+                true_frames = {
+                    'R': true_frames['R'].expand(B, L, 3, 3),
+                    't': true_frames['t'].expand(B, L, 3)
+                }
+            
+            losses['fape'] = L_fape(pred['pred_frames'], pred['atom_coords'], true_frames, true_coords, pred.get('atom_mask', None))
         else:
             # fallback: RMSD per atom masked
-            diff = (pred['atom_coords'] - target['atom_coords']).pow(2).sum(dim=-1)
-            m = target.get('atom_mask', None)
+            true_coords = target['atom_coords']
+            if true_coords.dim() == 5:  # (B, 1, L, N, 3) -> (B, L, N, 3)
+                true_coords = true_coords.squeeze(1)
+            elif true_coords.dim() == 4 and true_coords.shape[1] == 1:  # (B, 1, L, 3) -> (B, L, 1, 3)
+                true_coords = true_coords.unsqueeze(2)
+            
+            # Ensure shapes match
+            if true_coords.shape != pred['atom_coords'].shape:
+                B, L, N, _ = pred['atom_coords'].shape
+                if true_coords.dim() == 3:  # (B, L, 3) -> (B, L, 1, 3)
+                    true_coords = true_coords.unsqueeze(2)
+                elif true_coords.dim() == 4:
+                    if true_coords.shape[2] < N:
+                        pad_size = N - true_coords.shape[2]
+                        true_coords = torch.cat([true_coords, torch.zeros(B, L, pad_size, 3, device=true_coords.device)], dim=2)
+                    elif true_coords.shape[2] > N:
+                        true_coords = true_coords[:, :, :N, :]
+            
+            diff = (pred['atom_coords'] - true_coords).pow(2).sum(dim=-1)
+            m = pred.get('atom_mask', None)
             if m is not None:
                 losses['fape'] = (diff * m.to(diff.dtype)).sum() / (m.sum() + 1e-8)
             else:

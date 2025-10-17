@@ -8,7 +8,7 @@ INDEX_FILE=${1:-"fold-0_train_ids"}
 BATCH_SIZE=${2:-4}
 EPOCHS=${3:-100}
 DATA_DIR="/home/rcy/code/RhoFold/RNA3D_DATA"
-SAVE_DIR="./checkpoints"
+SAVE_DIR="./checkpoints_fold-0"
 
 echo "Starting RhoFold Diffusion Training"
 echo "=================================="

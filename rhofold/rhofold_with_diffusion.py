@@ -76,11 +76,12 @@ class RhoFoldWithDiffusion(nn.Module):
         output['p'], output['c4_'], output['n'] = self.dist_head(pair_fea.float())
         return output
 
-    def forward_one_cycle(self, tokens, rna_fm_tokens, recycling_inputs, seq):
+    def forward_one_cycle(self, tokens, rna_fm_tokens, recycling_inputs, seq, valid_msa=None):
         '''
         Args:
             tokens: [bs, seq_len, c_z]
             rna_fm_tokens: [bs, seq_len, c_z]
+            valid_msa: Boolean tensor indicating which samples have valid MSA [bs]
         '''
 
         device = tokens.device
@@ -90,6 +91,16 @@ class RhoFoldWithDiffusion(nn.Module):
         msa_fea, pair_fea = self.msa_embedder.forward(tokens=msa_tokens_pert,
                                                       rna_fm_tokens=rna_fm_tokens,
                                                       is_BKL=True)
+        
+        # Handle invalid MSA samples
+        if valid_msa is not None:
+            # For samples without valid MSA, zero out MSA embeddings
+            # and rely solely on RNA-FM sequence embeddings
+            invalid_msa_mask = ~valid_msa
+            if invalid_msa_mask.any():
+                # Zero out MSA features for invalid samples
+                msa_fea[invalid_msa_mask] = 0.0
+                # Keep pair features as they come from RNA-FM
 
         if exists(self.recycle_embnet) and exists(recycling_inputs):
             msa_fea_up, pair_fea_up = self.recycle_embnet(recycling_inputs['single_fea'],
@@ -122,11 +133,16 @@ class RhoFoldWithDiffusion(nn.Module):
                 tokens,
                 rna_fm_tokens,
                 seq,
+                valid_msa=None,
                 **kwargs):
 
         """Perform the forward pass.
 
         Args:
+            tokens: MSA tokens [B, MSA_depth, L]
+            rna_fm_tokens: RNA-FM tokens [B, L]
+            seq: Sequence string
+            valid_msa: Boolean tensor indicating which samples have valid MSA [B]
 
         Returns:
         """
@@ -136,7 +152,7 @@ class RhoFoldWithDiffusion(nn.Module):
         outputs = []
         for _r in range(self.config.model.recycling_embedder.recycles):
             output, recycling_inputs = \
-                self.forward_one_cycle(tokens, rna_fm_tokens, recycling_inputs, seq)
+                self.forward_one_cycle(tokens, rna_fm_tokens, recycling_inputs, seq, valid_msa)
             outputs.append(output)
 
         return outputs

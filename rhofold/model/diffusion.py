@@ -240,8 +240,10 @@ class DiffusionModule(nn.Module):
     def extract(self, a, t, x_shape):
         """Extract coefficients for given timesteps."""
         batch_size = t.shape[0]
-        out = a.gather(-1, t.cpu())
-        return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
+        # Ensure both tensors are on the same device
+        a = a.to(t.device)
+        out = a.gather(-1, t)
+        return out.reshape(batch_size, *((1,) * (len(x_shape) - 1)))
     
     def q_sample(self, x_start, t, noise=None):
         """Sample from q(x_t | x_0)."""
@@ -329,8 +331,10 @@ class DiffusionModule(nn.Module):
         
         # During training, add noise to pairwise features
         if self.training:
-            # Sample random timesteps
+            # Sample random timesteps (ensure they're within valid range)
             t = torch.randint(0, self.num_timesteps, (batch_size,), device=device)
+            # Clamp to ensure valid range
+            t = torch.clamp(t, 0, self.num_timesteps - 1)
             
             # Add noise to pairwise features
             noise = torch.randn_like(z)

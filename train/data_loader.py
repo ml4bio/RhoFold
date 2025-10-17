@@ -18,6 +18,7 @@ from Bio.PDB import PDBParser, PDBIO
 import mdtraj as md
 from rhofold.utils.alphabet import RNAAlphabet
 from rhofold.utils.converter import RNAConverter
+from train.utils_a3m import read_a3m, align_msa_to_seq
 
 
 class RhoFoldDataset(Dataset):
@@ -78,6 +79,12 @@ class RhoFoldDataset(Dataset):
     def __getitem__(self, idx):
         sample_name = self.samples[idx]
         
+        # Initialize variables
+        sequence = None
+        msa_sequences = None
+        structure_data = None
+        valid_msa = False
+        
         try:
             # Load sequence from seq/ subdirectory
             seq_path = self.seq_dir / f"{sample_name}.seq"
@@ -91,15 +98,34 @@ class RhoFoldDataset(Dataset):
             
             # Load MSA from rMSA/ subdirectory (note: .a3m extension)
             msa_path = self.msa_dir / f"{sample_name}.a3m"
-            msa_sequences = self._load_msa(msa_path)
+            if msa_path.exists():
+                try:
+                    msa_sequences = self._load_msa_with_alignment(msa_path, sequence)
+                    valid_msa = True
+                except Exception as e:
+                    print(f"Warning: Failed to load MSA for {sample_name}: {e}")
+                    msa_sequences = None
+                    valid_msa = False
+            else:
+                print(f"Warning: MSA file not found for {sample_name}")
+                msa_sequences = None
+                valid_msa = False
             
             # Load structure from pdb/ subdirectory
             pdb_path = self.pdb_dir / f"{sample_name}.pdb"
-            structure_data = self._load_structure(pdb_path)
+            if pdb_path.exists():
+                try:
+                    structure_data = self._load_structure(pdb_path)
+                except Exception as e:
+                    print(f"Warning: Failed to load structure for {sample_name}: {e}")
+                    structure_data = self._get_dummy_structure()
+            else:
+                print(f"Warning: PDB file not found for {sample_name}")
+                structure_data = self._get_dummy_structure()
             
-            # Process data
+            # Process data with MSA validity flag
             processed = self._process_sample(
-                sequence, msa_sequences, structure_data, sample_name
+                sequence, msa_sequences, structure_data, sample_name, valid_msa
             )
             
             return processed
@@ -107,12 +133,12 @@ class RhoFoldDataset(Dataset):
         except Exception as e:
             print(f"Error loading sample {sample_name}: {e}")
             # For real data, try to continue with available data
-            if sequence and msa_sequences:
+            if sequence:
                 print(f"  Continuing with sequence data only...")
                 # Create minimal structure data
                 structure_data = self._get_dummy_structure()
                 processed = self._process_sample(
-                    sequence, msa_sequences, structure_data, sample_name
+                    sequence, None, structure_data, sample_name, False
                 )
                 return processed
             else:
@@ -126,6 +152,37 @@ class RhoFoldDataset(Dataset):
             for record in SeqIO.parse(f, 'fasta'):
                 sequences.append(str(record.seq))
         return sequences
+    
+    def _load_msa_with_alignment(self, msa_path: Path, sequence: str) -> List[str]:
+        """Load MSA from A3M format with alignment to the given sequence."""
+        try:
+            # Use the alignment function from utils_a3m
+            aligned_msa = align_msa_to_seq(sequence, str(msa_path))
+            
+            if aligned_msa is None:
+                print(f"Warning: MSA alignment failed for {msa_path}")
+                return None
+            
+            # Convert numpy array back to list of strings
+            sequences = []
+            for i in range(aligned_msa.shape[0]):
+                seq_str = ""
+                for j in range(aligned_msa.shape[1]):
+                    idx = aligned_msa[i, j]
+                    if idx == 0:  # Gap
+                        seq_str += "-"
+                    elif idx <= len("ACGUN"):
+                        seq_str += "ACGUN"[idx - 1]
+                    else:
+                        seq_str += "-"
+                sequences.append(seq_str)
+            
+            return sequences
+            
+        except Exception as e:
+            print(f"Error in MSA alignment for {msa_path}: {e}")
+            # Fallback to simple loading
+            return self._load_msa(msa_path)
     
     def _load_structure(self, pdb_path: Path) -> Dict:
         """Load structure from PDB file."""
@@ -175,30 +232,39 @@ class RhoFoldDataset(Dataset):
         return atom_type_map.get(element, 0)
     
     def _process_sample(self, sequence: str, msa_sequences: List[str], 
-                       structure_data: Dict, sample_name: str) -> Dict:
+                       structure_data: Dict, sample_name: str, valid_msa: bool = True) -> Dict:
         """Process a single sample into model inputs."""
         
-        # Process MSA - tokens should be 2D [msa_depth, seq_len]
-        msa_tokens = []
-        for seq in msa_sequences[:self.msa_depth]:
-            # Ensure MSA sequence has same length as main sequence
-            if len(seq) != len(sequence):
-                print(f"Warning: MSA sequence length {len(seq)} != main sequence length {len(sequence)}")
-                # Truncate or pad MSA sequence to match main sequence
-                if len(seq) > len(sequence):
-                    seq = seq[:len(sequence)]
-                else:
-                    seq = seq + 'A' * (len(sequence) - len(seq))
+        # Process MSA based on validity
+        if valid_msa and msa_sequences is not None:
+            # Case 1: Valid MSA data - process normally
+            msa_tokens = []
+            for seq in msa_sequences[:self.msa_depth]:
+                # Ensure MSA sequence has same length as main sequence
+                if len(seq) != len(sequence):
+                    print(f"Warning: MSA sequence length {len(seq)} != main sequence length {len(sequence)}")
+                    # Truncate or pad MSA sequence to match main sequence
+                    if len(seq) > len(sequence):
+                        seq = seq[:len(sequence)]
+                    else:
+                        seq = seq + 'A' * (len(sequence) - len(seq))
+                
+                seq_tokens = [self.alphabet.get_idx(s) for s in seq]
+                msa_tokens.append(seq_tokens)
             
-            seq_tokens = [self.alphabet.get_idx(s) for s in seq]
-            msa_tokens.append(seq_tokens)
-        
-        # Pad MSA to fixed depth
-        while len(msa_tokens) < self.msa_depth:
-            msa_tokens.append([0] * len(sequence))  # Pad with zeros
-        
-        tokens = torch.tensor(msa_tokens, dtype=torch.long)  # [msa_depth, seq_len]
-        msa_tokens = tokens  # Same as tokens for now
+            # Pad MSA to fixed depth
+            while len(msa_tokens) < self.msa_depth:
+                msa_tokens.append([0] * len(sequence))  # Pad with zeros
+            
+            tokens = torch.tensor(msa_tokens, dtype=torch.long)  # [msa_depth, seq_len]
+            msa_tokens = tokens  # Same as tokens for now
+            
+        else:
+            # Case 2: No MSA data - create zero-filled tensors
+            print(f"Using zero-filled MSA for {sample_name}")
+            seq_len = len(sequence)
+            msa_tokens = torch.zeros(self.msa_depth, seq_len, dtype=torch.long)
+            tokens = msa_tokens  # Same as msa_tokens for now
         
         # Pad sequences to max length
         seq_len = min(tokens.shape[1], self.max_seq_len)
@@ -274,6 +340,7 @@ class RhoFoldDataset(Dataset):
             'atom_types': atom_types,
             'atom_mask': atom_mask,
             'target': target,
+            'valid_msa': valid_msa,  # Add MSA validity flag
         }
     
     def _create_targets(self, sequence: str, structure_data: Dict, seq_len: int) -> Dict:
@@ -348,6 +415,7 @@ class RhoFoldDataset(Dataset):
             'atom_types': torch.zeros(1, seq_len, 23, dtype=torch.long),
             'atom_mask': torch.zeros(1, seq_len, 23, dtype=torch.bool),
             'target': self._get_dummy_target(seq_len),
+            'valid_msa': False,  # Dummy samples have no valid MSA
         }
     
     def _get_dummy_structure(self) -> Dict:
@@ -384,7 +452,8 @@ class RhoFoldDataset(Dataset):
 def collate_fn(batch):
     """Collate function for DataLoader."""
     # Pad sequences to same length - tokens is [msa_depth, seq_len]
-    max_len = max(item['tokens'].shape[1] for item in batch)  # Get max sequence length
+    token_lengths = [item['tokens'].shape[1] for item in batch]
+    max_len = max(token_lengths) if token_lengths else 1
     
     collated = {}
     for key in batch[0].keys():
@@ -412,8 +481,59 @@ def collate_fn(batch):
                                 padded[i, :len(tensor)] = tensor
                             collated[key][target_key] = padded
                         else:
-                            # Flattened tensor (like atom_coords) - just stack
-                            collated[key][target_key] = torch.stack(tensors)
+                            # Flattened tensor (like atom_coords) - need to pad to same length
+                            if target_key == 'atom_coords':
+                                # atom_coords is (L*N, 3) - need to pad to max length
+                                max_atoms = max(tensor.shape[0] for tensor in tensors)
+                                padded = torch.zeros(len(batch), max_atoms, 3, dtype=tensors[0].dtype)
+                                for i, tensor in enumerate(tensors):
+                                    padded[i, :tensor.shape[0]] = tensor
+                                collated[key][target_key] = padded
+                            elif target_key == 'atom_mask':
+                                # atom_mask is (L*N,) - need to pad to max length
+                                max_atoms = max(tensor.shape[0] for tensor in tensors)
+                                padded = torch.zeros(len(batch), max_atoms, dtype=tensors[0].dtype)
+                                for i, tensor in enumerate(tensors):
+                                    padded[i, :tensor.shape[0]] = tensor
+                                collated[key][target_key] = padded
+                            else:
+                                # Other flattened tensors - need to check if they need padding
+                                if target_key in ['masked_tokens', 'plddt_true', 'res_mask']:
+                                    # These are 1D tensors that need padding to max sequence length
+                                    padded = torch.zeros(len(batch), max_len, dtype=tensors[0].dtype)
+                                    for i, tensor in enumerate(tensors):
+                                        if len(tensor) > 0:  # Check if tensor is not empty
+                                            padded[i, :len(tensor)] = tensor
+                                    collated[key][target_key] = padded
+                                elif target_key == 'basepair_list':
+                                    # Special handling for basepair_list which can be empty
+                                    # Find the maximum number of basepairs across all samples
+                                    max_basepairs = max(tensor.shape[0] for tensor in tensors)
+                                    if max_basepairs > 0:
+                                        padded = torch.zeros(len(batch), max_basepairs, 2, dtype=tensors[0].dtype)
+                                        for i, tensor in enumerate(tensors):
+                                            if tensor.shape[0] > 0:
+                                                padded[i, :tensor.shape[0]] = tensor
+                                        collated[key][target_key] = padded
+                                    else:
+                                        # All basepair_list are empty, create empty tensor
+                                        collated[key][target_key] = torch.zeros(len(batch), 0, 2, dtype=tensors[0].dtype)
+                                else:
+                                    # Other flattened tensors - check if they can be stacked
+                                    try:
+                                        collated[key][target_key] = torch.stack(tensors)
+                                    except RuntimeError:
+                                        # If stacking fails, pad to same length
+                                        max_len_tensor = max(tensor.shape[0] for tensor in tensors)
+                                        if tensors[0].dim() == 1:
+                                            padded = torch.zeros(len(batch), max_len_tensor, dtype=tensors[0].dtype)
+                                            for i, tensor in enumerate(tensors):
+                                                if len(tensor) > 0:
+                                                    padded[i, :len(tensor)] = tensor
+                                            collated[key][target_key] = padded
+                                        else:
+                                            # Fallback: just stack what we can
+                                            collated[key][target_key] = torch.stack(tensors)
                     elif tensors[0].dim() == 2:
                         # 2D tensors - check if it's square (pairwise) or rectangular
                         if tensors[0].shape[0] == tensors[0].shape[1]:
@@ -421,10 +541,33 @@ def collate_fn(batch):
                             padded = torch.zeros(len(batch), max_len, max_len, dtype=tensors[0].dtype)
                             for i, tensor in enumerate(tensors):
                                 padded[i, :tensor.shape[0], :tensor.shape[1]] = tensor
+                            collated[key][target_key] = padded
                         else:
-                            # Rectangular matrix - just stack
-                            padded = torch.stack(tensors)
-                        collated[key][target_key] = padded
+                            # Rectangular matrix - need to check if it's atom_coords related
+                            if target_key in ['atom_coords', 'atom_mask']:
+                                # These are flattened tensors that need padding
+                                max_atoms = max(tensor.shape[0] for tensor in tensors)
+                                if target_key == 'atom_coords':
+                                    padded = torch.zeros(len(batch), max_atoms, 3, dtype=tensors[0].dtype)
+                                else:
+                                    padded = torch.zeros(len(batch), max_atoms, dtype=tensors[0].dtype)
+                                for i, tensor in enumerate(tensors):
+                                    padded[i, :tensor.shape[0]] = tensor
+                                collated[key][target_key] = padded
+                            else:
+                                # Other rectangular matrices - check if they need padding
+                                if target_key in ['basepair_list']:
+                                    # Special handling for basepair_list which can have different lengths
+                                    max_basepairs = max(tensor.shape[0] for tensor in tensors)
+                                    if tensors[0].shape[1] == 2:  # (N, 2) format
+                                        padded = torch.zeros(len(batch), max_basepairs, 2, dtype=tensors[0].dtype)
+                                        for i, tensor in enumerate(tensors):
+                                            padded[i, :tensor.shape[0]] = tensor
+                                        collated[key][target_key] = padded
+                                    else:
+                                        collated[key][target_key] = torch.stack(tensors)
+                                else:
+                                    collated[key][target_key] = torch.stack(tensors)
                     else:
                         # Higher dim tensors - stack as is
                         collated[key][target_key] = torch.stack(tensors)
@@ -468,8 +611,41 @@ def collate_fn(batch):
                     padded[i, :item[key].shape[0], :item[key].shape[1]] = item[key]
                 collated[key] = padded
         elif key in ['atom_coords', 'atom_types', 'atom_mask']:
-            # Stack these tensors
-            collated[key] = torch.stack([item[key] for item in batch])
+            # Pad these tensors to same sequence length
+            tensors = [item[key] for item in batch]
+            if tensors[0].dim() == 4:  # (B, L, N, 3) or (B, L, N)
+                # Get max sequence length
+                max_seq_len = max(tensor.shape[1] for tensor in tensors)
+                atoms_per_residue = tensors[0].shape[2]
+                
+                if key == 'atom_coords':
+                    # (B, L, N, 3) -> (B, L, N, 3)
+                    padded = torch.zeros(len(batch), max_seq_len, atoms_per_residue, 3, dtype=tensors[0].dtype)
+                else:
+                    # (B, L, N) -> (B, L, N)
+                    padded = torch.zeros(len(batch), max_seq_len, atoms_per_residue, dtype=tensors[0].dtype)
+                
+                for i, tensor in enumerate(tensors):
+                    seq_len = tensor.shape[1]
+                    padded[i, :seq_len] = tensor
+                collated[key] = padded
+            else:
+                # Fallback to stacking if dimensions don't match expected format
+                # But first check if we need padding for atom-related tensors
+                if key in ['atom_types', 'atom_mask']:
+                    # These are (B, L, N) tensors that need padding
+                    max_seq_len = max(tensor.shape[1] for tensor in tensors)
+                    atoms_per_residue = tensors[0].shape[2]
+                    padded = torch.zeros(len(batch), max_seq_len, atoms_per_residue, dtype=tensors[0].dtype)
+                    for i, tensor in enumerate(tensors):
+                        seq_len = tensor.shape[1]
+                        padded[i, :seq_len] = tensor
+                    collated[key] = padded
+                else:
+                    collated[key] = torch.stack(tensors)
+        elif key == 'valid_msa':
+            # Handle MSA validity flag
+            collated[key] = torch.tensor([item[key] for item in batch], dtype=torch.bool)
         else:
             # For other keys (strings, etc.), just collect them
             collated[key] = [item[key] for item in batch]

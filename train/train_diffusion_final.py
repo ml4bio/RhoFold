@@ -134,12 +134,20 @@ class DiffusionTrainer:
                     for subkey in batch[key]:
                         if isinstance(batch[key][subkey], torch.Tensor):
                             batch[key][subkey] = batch[key][subkey].to(self.device)
+                        elif isinstance(batch[key][subkey], dict):
+                            # Handle nested dicts like true_frames
+                            for subsubkey in batch[key][subkey]:
+                                if isinstance(batch[key][subkey][subsubkey], torch.Tensor):
+                                    batch[key][subkey][subsubkey] = batch[key][subkey][subsubkey].to(self.device)
             
             # Convert msa_tokens from 3D to 2D for RNA-FM
             rna_fm_tokens = batch['msa_tokens'][:, 0, :]
             
             # Convert sequence from list to string
             seq_str = batch['sequence'][0] if isinstance(batch['sequence'], list) else batch['sequence']
+            
+            # Get MSA validity flag
+            valid_msa = batch.get('valid_msa', torch.ones(batch['tokens'].shape[0], dtype=torch.bool))
             
             # Forward pass
             self.optimizer.zero_grad()
@@ -148,7 +156,8 @@ class DiffusionTrainer:
                 outputs = self.model(
                     tokens=batch['tokens'],
                     rna_fm_tokens=rna_fm_tokens,
-                    seq=seq_str
+                    seq=seq_str,
+                    valid_msa=valid_msa
                 )
                 
                 # Use the last recycling output for loss computation
@@ -203,6 +212,11 @@ class DiffusionTrainer:
                         for subkey in batch[key]:
                             if isinstance(batch[key][subkey], torch.Tensor):
                                 batch[key][subkey] = batch[key][subkey].to(self.device)
+                            elif isinstance(batch[key][subkey], dict):
+                                # Handle nested dicts like true_frames
+                                for subsubkey in batch[key][subkey]:
+                                    if isinstance(batch[key][subkey][subsubkey], torch.Tensor):
+                                        batch[key][subkey][subsubkey] = batch[key][subkey][subsubkey].to(self.device)
                 
                 # Convert msa_tokens from 3D to 2D for RNA-FM
                 rna_fm_tokens = batch['msa_tokens'][:, 0, :]
@@ -210,12 +224,16 @@ class DiffusionTrainer:
                 # Convert sequence from list to string
                 seq_str = batch['sequence'][0] if isinstance(batch['sequence'], list) else batch['sequence']
                 
+                # Get MSA validity flag
+                valid_msa = batch.get('valid_msa', torch.ones(batch['tokens'].shape[0], dtype=torch.bool))
+                
                 try:
                     # Forward pass
                     outputs = self.model(
                         tokens=batch['tokens'],
                         rna_fm_tokens=rna_fm_tokens,
-                        seq=seq_str
+                        seq=seq_str,
+                        valid_msa=valid_msa
                     )
                     
                     # Use the last recycling output for loss computation

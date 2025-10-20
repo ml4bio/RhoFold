@@ -4,8 +4,8 @@
 # Usage: bash start_training.sh [index_file] [batch_size] [epochs]
 
 # Default parameters
-INDEX_FILE=${1:-"fold-0_train_ids"}
-BATCH_SIZE=${2:-4}
+INDEX_FILE=${1:-"valid_fold-0"}
+BATCH_SIZE=${2:-1}
 EPOCHS=${3:-100}
 DATA_DIR="/home/rcy/code/RhoFold/RNA3D_DATA"
 SAVE_DIR="./checkpoints_fold-0"

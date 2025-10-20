@@ -6,3 +6,4 @@ checkpoints/
 *.ckpt
 *.pt
 *.bin
+checkpoints_fold-0/

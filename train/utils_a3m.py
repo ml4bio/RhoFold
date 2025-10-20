@@ -106,8 +106,13 @@ def align_msa_to_seq(seq, a3m_input, alphabet="ACGUN"):
     msa = fixed
 
     # Step 4: 转为 numpy 数组 (N,L)
-    alphabet_dict = {a: i+1 for i, a in enumerate(alphabet)}
-    alphabet_dict["-"] = 0
-    arr = np.array([[alphabet_dict.get(c.upper(), 0) for c in row] for row in msa], dtype=np.int64)
+    # 映射到RhoFold MSA alphabet: A=4, U=5, G=6, C=7, -=8, 其他=3(unk)
+    alphabet_dict = {
+        'A': 4, 'U': 5, 'G': 6, 'C': 7, '-': 8
+    }
+    arr = np.array([[alphabet_dict.get(c.upper(), 3) for c in row] for row in msa], dtype=np.int64)
+    
+    # 确保范围在 [0, 16] 内（RhoFold MSA vocab size = 17）
+    arr = np.clip(arr, 0, 16)  # 确保范围安全
 
     return arr

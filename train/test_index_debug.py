@@ -32,7 +32,7 @@ def test_dataset_scan():
     print(f"Dataset length: {len(dataset)}")
     
     # 扫描前100个样本
-    scan_dataset(dataset, vocab_size_seq=30, vocab_size_msa=10, num_samples=100)
+    scan_dataset(dataset, vocab_size_seq=30, vocab_size_msa=17, num_samples=100)
 
 
 def test_dataloader_scan():
@@ -60,7 +60,7 @@ def test_dataloader_scan():
     print(f"Dataset length: {len(dataset)}")
     
     # 扫描前5个batch
-    scan_dataloader(loader, vocab_size_seq=30, vocab_size_msa=10, num_batches=5)
+    scan_dataloader(loader, vocab_size_seq=30, vocab_size_msa=17, num_batches=5)
 
 
 def main():

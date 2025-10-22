@@ -1,9 +1,20 @@
-# 忽略软链接数据集文件夹
-RNA3D_DATA
-database/
-# Ignore model checkpoints
-checkpoints/
-*.ckpt
+# 忽略大型文件与临时结果
+__pycache__/
+*.pyc
+*.pkl
 *.pt
 *.bin
+*.ckpt
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# 数据与模型目录
+RNA3D_DATA/
+checkpoints/
 checkpoints_fold-0/
+results/
+pretrained/
+envs/
+database/

@@ -13,10 +13,18 @@
 """Structure refinement"""
 import os.path
 
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import simtk.openmm as mm
+try:  # OpenMM >= 7.6 (conda-forge builds for x86_64, aarch64 and macOS)
+    from openmm.app import *
+    from openmm import *
+    from openmm.unit import *
+    from openmm import app
+    import openmm as mm
+except ImportError:  # older OpenMM releases
+    from simtk.openmm.app import *
+    from simtk.openmm import *
+    from simtk.unit import *
+    from simtk.openmm import app
+    import simtk.openmm as mm
 from sys import stdout
 from rhofold.utils import timing, tmpdir
 import subprocess

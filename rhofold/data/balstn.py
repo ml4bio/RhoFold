@@ -16,6 +16,28 @@ from typing import Any, Mapping
 from rhofold.utils import tmpdir, timing
 import shutil, os
 
+def _find_blastn(binary_dpath):
+  """Returns a blastn that runs on this machine.
+
+  The bundled binary (rhofold/data/bin/blastn) is built for x86_64 only.
+  On other platforms (aarch64, macOS) fall back to the blastn on PATH,
+  e.g. from `conda install -c bioconda blast`.
+  """
+  bundled = os.path.join(binary_dpath, 'blastn')
+  if os.path.isfile(bundled):
+    try:
+      subprocess.run([bundled, '-version'], stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, check=True)
+      return bundled
+    except (OSError, subprocess.CalledProcessError):
+      pass
+  system_blastn = shutil.which('blastn')
+  if system_blastn is not None:
+    return system_blastn
+  raise RuntimeError(f'No working blastn found ({bundled} cannot run on this machine '
+                     'and blastn is not on PATH). Install it with: conda install -c bioconda blast')
+
+
 class BLASTN:
   """Python wrapper of the BLAST binary."""
 
@@ -51,7 +73,7 @@ class BLASTN:
               db_name = os.path.basename(database)
               blast = f'{query_tmp_dir}/blast_{db_name}.db'
 
-              cmd = [f'{self.binary_path}/blastn',
+              cmd = [_find_blastn(self.binary_path),
                     '-db', database,
                     '-query',input_fasta_path,
                     '-out', blast,

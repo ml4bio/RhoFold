@@ -12,7 +12,6 @@ from rhofold.data.balstn import BLASTN
 from rhofold.rhofold import RhoFold
 from rhofold.config import rhofold_config
 from rhofold.utils import get_device, save_ss2ct, timing
-from rhofold.relax.relax import AmberRelaxation
 from rhofold.utils.alphabet import get_features
 
 @torch.no_grad()
@@ -118,6 +117,11 @@ def main(config):
         relax_steps = int(config.relax_steps)
         if relax_steps > 0:
             with timing(f'Amber Relaxation : {relax_steps} iterations', logger=logger):
+                try:
+                    from rhofold.relax.relax import AmberRelaxation
+                except ImportError as e:
+                    raise ImportError('Amber relaxation needs OpenMM (conda install -c conda-forge openmm). '
+                                      'Use --relax_steps 0 to skip relaxation.') from e
                 amber_relax = AmberRelaxation(max_iterations=relax_steps, logger=logger)
                 relaxed_model = f'{config.output_dir}/relaxed_{relax_steps}_model.pdb'
                 amber_relax.process(unrelaxed_model, relaxed_model)

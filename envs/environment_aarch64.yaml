@@ -1,0 +1,22 @@
+# Conda environment for Linux aarch64 (ARM64), e.g. NVIDIA DGX Spark (GB10),
+# GH200 / Grace Hopper, or other ARM servers.
+# PyTorch is installed separately with pip (see README), so that the CUDA
+# build matches the machine.
+name: rhofold-arm
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - biopython
+  - matplotlib
+  - openmm      # Amber relaxation (optional, --relax_steps 0 skips it)
+  - blast       # replaces the bundled x86_64 blastn binary for MSA search
+  - perl        # used by parse_blastn_local.pl and reformat.pl
+  - pip:
+      - einops
+      - ml-collections
+      - dm-tree
+      - python-box

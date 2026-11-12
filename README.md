@@ -22,6 +22,7 @@ This is the open source code for RhoFold+.
 - [Online Server](#Online_Server) 
 - [Local Environment Setup](#Local_Environment_Setup)
   - [For Linux Users](#Installation_Linux)
+  - [For Linux aarch64 (ARM64) Users](#Installation_ARM64)
   - [Download Pre-trained Model](#Pretrained_Model)
 - [Usage](#usage)
   - [Input Arguments](#Arguments)
@@ -65,6 +66,31 @@ Then, activate the "RhoFold" environment.
 conda activate RhoFold
 python setup.py install
 ```
+
+### Linux aarch64 (ARM64) users <a name="Installation_ARM64"></a>
+Tested on NVIDIA DGX Spark (GB10, CUDA 13). It should also work on other aarch64 Linux machines (e.g. GH200 / Grace Hopper).
+
+The bundled `rhofold/data/bin/blastn` is an x86_64 binary. On aarch64, RhoFold uses the `blastn` from the conda environment instead (bioconda `blast`).
+
+```
+git clone https://github.com/ml4bio/RhoFold.git
+cd ./RhoFold
+conda env create -f ./envs/environment_aarch64.yaml
+conda activate rhofold-arm
+# PyTorch with CUDA for aarch64 (pick the index that matches your CUDA version)
+pip install torch --index-url https://download.pytorch.org/whl/cu130
+pip install -e .
+```
+
+Quick check (single sequence, no MSA search):
+```
+python inference.py --input_fas ./example/input/3owzA/3owzA.fasta --single_seq_pred True \
+  --output_dir ./example/output/3owzA/ --ckpt ./pretrained/rhofold_pretrained_params.pt --device cuda:0
+```
+
+Notes:
+* Amber relaxation needs OpenMM, which is included in the environment. Use `--relax_steps 0` to skip it.
+* The database build scripts in `./database/bin` use x86_64 binaries (`makeblastdb`, `cmpress`, `fastaNA`, `catRNAcentral`). On aarch64, build the databases on an x86_64 machine and copy them, or use `makeblastdb` (bioconda `blast`) and `cmpress` (bioconda `infernal`) from conda. Prediction itself (with or without MSA) runs natively on aarch64.
 
 ### Download pre-trained model <a name="Pretrained_Model"></a>
 
